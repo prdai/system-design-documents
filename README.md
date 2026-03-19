@@ -2,7 +2,7 @@
 
 i come up with random ideas, time to time, but i usually am too lazy to implement it, or can't be asked- so i think about it randomly and work on it mentally of how that system goes, so this repository is to make use of that mental energy i randomly spend.
 
-all of the ideas within this are fully free and open, the only requirement is that whatever you make is open source (checkout the [licensing](##licensing) section, and checkout (Contributing Guidelines)[CONTRIUTING.md] for more information on exactly the rules, but its not much.
+all of the ideas within this are fully free and open, the only requirement is that whatever you make is open source (checkout the [licensing](##licensing) section, and checkout [Contributing Guidelines](CONTRIUTING.md) for more information on exactly the rules, but its not much.
 
 the amount of details per project can vary based on just how i think about it, some might have excalidrawn diagrams, some might not-
 
