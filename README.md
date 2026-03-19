@@ -6,6 +6,8 @@ all of the ideas within this are fully free and open, the only requirement is th
 
 the amount of details per project can vary based on just how i think about it, some might have excalidrawn diagrams, some might not-
 
+i do utilize ai tools such as github copilot or claude to help write the markdown, but the ideas and thinking behind everything are entirely mine- they just help me get it down faster.
+
 would apprecite if you refernence the repository if you did use it for reference for your project, in the README or some where.
 
 ## licensing

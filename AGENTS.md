@@ -1,0 +1,15 @@
+# agent guidelines
+
+## writing style
+
+- keep the tone casual and nonchalant, lowercase everything
+- avoid words that sound try-hard or cringe (e.g. "shoutout", "collab", "awesome")
+- use dashes for pauses, write like you're just talking
+- match the existing vibe of the repo's README.md
+
+## raw inputs
+
+- every design document folder should have a `raw.mdx` file that contains the unedited raw inputs provided by the user
+- this is for transparency- an open look at how the ideas were communicated before being cleaned up
+- always create and update this file when writing or updating the design document sections
+- every time new inputs are provided in a conversation, append them to the raw.mdx file for that design document- don't skip this across any interaction
