@@ -1,0 +1,72 @@
+# raw inputs
+
+these are the raw unedited inputs that were provided to put together the design document- just for transparency and an open look at how the ideas were communicated before being cleaned up.
+
+---
+
+## why
+
+so i went to keells (a organization in sri lanka), and me and my friend got a water bottle and went through self checkout and then we got a receipt, sri lanka started this initative for well reducing polythene usage, so they started charging people for plastic bag, fair enoguh but imagine all of that wasted receipts, i just saw a bunch of them, some companies do give it through sms still personally i hate it, so i was like oh wait, can't we actually like automate this, we are bunch of tech people right- why can't we (the person i was having this covo with was https://github.com/Methika1234) so yeah, that's how the idea came to
+
+## problem
+
+for the problem check the following statistics, its mainly the paper problem angle we can go for tbh-
+
+green america says u.s. receipt use consumes 3.68 million trees and 10 billion gallons of water annually, and that production/disposal emits the carbon equivalent of over 471,000 cars on the road. the same report says 93% of paper receipts are coated with bpa or bps, and consumers report throwing away or losing 49% of the paper receipts they receive. https://reports.greenamerica.org/skip-the-slip
+
+wired reported the uk hands out about 11.2 billion receipts per year, costing at least £32 million to make. https://www.wired.com/story/receipt-recycling-uk-thermal-paper-digital-receipt
+
+## solution
+
+the solution is a system that standarizses this entire receipt non sense, and allows for further integration, our paln is that organization would be like sign up to our platform right- and we would have a review process (and a multi agentic thing to verify it, it will come later), but yeah pretty much we will have a verified organizaiton, and they can get api keys for integration part of things-, and then, they can see the receipts sent, and search via customer and all that as well, this will allow for receipt manaegment some what but like by nature just filtering sort of- we will expose a api for the organization for this- like so that they can add a receipt, we need a verification process which i will go onto later on-
+
+from the user side of things we will have the normal authentication part of things stuff right- and then they will have a minimal inbox which shows them the receipts they got, with search and filtering, and profile, that's all that really is there, there is a user name given to them, and then we need to like otp that chagnes simikar to google auth, this is for our platform the organization that connects with the user, they need that otp code once, and then it can be ever lasting or for a certain amt of time, so the user is verified at least once sort of right- and the user can confirm or reject the receipts some what, they can accept all of the stuff from that organization, this is to ensure that no wrong stuff is done, thsi is sort of optional i suppose but yeah
+
+then we also have a api exposing thing lets say a expenses tracking app? they can integrate it with the users side and they will get access to the users receipts as required, so that's part of it type shit-
+
+## solution clarifications (round 2)
+
+the otp linking flow has some open questions
+
+- wherever possible at checkout, we support it via api right- and we provide them sort of a shrale thing, keells needs that otp verification then they get a key that connects the company to the user temporarly (or for however long the user configures), it can happen however they want, the user can also scan something but for now just the otp thing is easier to think about i think- the scanning part then we would need to like send it to them through a webhook or something i think we can do that as well that is fine then they get the key like the system does from their side-?
+
+what happens to users who don't have the app?
+
+- the hope is that this will become a global standard defacto, and that no one else has to use anything else
+
+receipt data format
+
+- there is like the category (whcih we get when the company registeres) and then also the name and the price that's the first things- and then the items can be sent if they do it via the api, so they can add a image, title, description (smol) and the price for that specific receipt
+
+third party api permissions and scoping
+
+- that is customizable, for now its gonna be all but fine grain control can be decided later on
+
+receipt rejection/confirmation
+
+- actually lets not do that, like remove that rejection/confirmation thing since the user gave their otp so there is a verification step done already right- we can have a report functioanlity if it is a wrong receipt provided or something like that-
+- the company needs to be able to like reject or like revoke a receipt as well if it was a mistake type shit
+
+org-side receipt ownership
+
+- no they can't delete it afterards or modify it we will have a sha256 hash, that's like a unqiue thing, we can even add a block chain thing that is for more secure like thing-?
+
+## receipt storage approach (round 3)
+
+for receipt storage we would option a (smart)
+
+append-only database
+
+hash chaining (like blockchain)
+
+centralized but verifiable have this sort of a setup btw, so yeah we need to ensure that it works similar to a block chain sort of a approach its more safer and better-
+
+## tech stack & references (round 4)
+
+for my personal preference this will be deployed on cloudflare workers, the backend can be a monolithc tbh since this is simple enough on hono, clodufalre d1 for the db, and cloudflare r2 for the storage, cloudflare vectorize for searching-, and then nextjs with opennext for the frontend for the organization, the mobile application using react native, its a very simple stack but it works, that append only database we can use a specific one or use cloudflare d1 as one if we want to as well
+
+reference: https://chatgpt.com/share/69bbc545-27d4-8012-9809-9fef86c8dd74
+
+## otp token design (round 5)
+
+based on external analysis of the otp flow- the connection key is actually a signed, expiring session token that binds user to org. going with a stateful approach- token has a session id, session data lives in db (user id, org id, expiry, status). on each request we verify signature, look up session, check status. this gives full revocation control. the flow is: user → otp → our api → issue signed token → org uses token → our api verifies → append receipt.

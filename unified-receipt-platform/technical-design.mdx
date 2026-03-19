@@ -1,0 +1,61 @@
+# technical design
+
+## tech stack
+
+the stack is intentionally simple- everything runs on cloudflare.
+
+- **backend**: monolithic on [hono](https://hono.dev), deployed on cloudflare workers
+- **database**: cloudflare d1 (can also serve as the append-only store)
+- **storage**: cloudflare r2 (for receipt images and attachments)
+- **search**: cloudflare vectorize
+- **org frontend**: nextjs with opennext (deployed on cloudflare)
+- **mobile app**: react native
+
+it's a very simple stack but it works for what this needs to do.
+
+## receipt storage & integrity
+
+the storage model is append-only with hash chaining- centralized but verifiable. think of it like a blockchain approach but without the decentralized overhead.
+
+how it works:
+
+- the database is strictly append-only- no updates, no deletes
+- every receipt gets a sha256 hash of its contents
+- each new receipt also includes the hash of the previous receipt in the chain, linking them together
+- this means if anyone tampers with a receipt in the middle, every hash after it breaks- making it verifiable
+
+centralized for simplicity, but the hash chain means anyone can verify that nothing has been messed with. we can use cloudflare d1 as the append-only store, or a dedicated one if needed down the line.
+
+## organization api
+
+organizations get api keys after verification. the api allows them to:
+
+- submit receipts to linked users
+- query receipts they've sent
+- search and filter by customer
+- issue void/correction receipts referencing an original receipt's hash
+
+## otp verification & token flow
+
+the otp system works similar to google authenticator. after otp verification, we issue a signed, expiring, scoped token that binds the user to the org- essentially a temporary cryptographic permission bridge.
+
+the flow:
+
+```
+user → otp → our api → issue signed token → org uses token → our api verifies → append receipt
+```
+
+we're going with a **stateful approach**- the token contains a session id, and the actual session data (user id, org id, expiry, status) lives in the database. on each request:
+
+- verify the token signature
+- look up the session
+- check it's still active and not expired
+- confirm the org id matches
+
+this gives us full control over revocation and auditing- if something goes wrong we can kill a session immediately rather than waiting for expiry.
+
+the token itself is scoped to a specific user and a specific org, so one org can't use a token meant for another. expiry is configurable by the user when they link.
+
+## third party api
+
+third party apps (e.g. expense trackers) can integrate with the user side to access receipt data. for now it's all-or-nothing access, fine-grained scoping (by org, date range, etc.) is planned for later.
