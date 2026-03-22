@@ -1,0 +1,54 @@
+# solution & requirements
+
+the solution is a system that standardizes this entire receipt situation- and allows for further integration down the line.
+
+## the organization side
+
+organizations would sign up to our platform, and we'd have a review process to verify them (we're planning a multi-agentic verification thing for this, but that'll come later). once verified, they can start integrating.
+
+from there, organizations can:
+
+- send receipts to users through our platform
+- see the receipts they've sent
+- search via customer and filter through their receipt history
+- issue void/correction receipts that reference the original if a mistake was made
+
+## linking users to organizations
+
+the way a user connects to an organization is through an otp system similar to google authenticator. the user provides the otp at checkout (typed in, scanned, however the org wants to handle it), the organization verifies it through us, and they get a key that connects the company to the user temporarily or for however long the user configures it.
+
+once linked, the organization can send receipts to that user for the duration of the connection.
+
+## the user side
+
+users sign up, get a username, and have a minimal inbox that shows receipts they've received- with search, filtering, and a profile. that's about it.
+
+the otp system is how they verify themselves to organizations. since the user already gave their otp to link with an org, there's no need for receipt-level confirmation or rejection- that verification step is already done.
+
+if a user gets a wrong receipt or something weird happens, there's a report functionality for that.
+
+## what a receipt looks like
+
+each receipt has:
+
+- a category (which comes from the company's registration)
+- a name and total price
+
+for items within the receipt, each item can have:
+
+- an image
+- a title
+- a description (short)
+- the price for that item
+
+## receipt integrity
+
+receipts are immutable once sent- nothing gets edited or deleted, ever. if an organization made a mistake, they issue a void/correction receipt that references the original rather than modifying it.
+
+the storage uses an append-only model with hash chaining to make sure nothing can be tampered with- more on that in the [technical design](./technical-design.mdx).
+
+## third party integration
+
+we expose access for third party apps- say an expense tracking app for example. they can integrate with the user's side and get access to the user's receipts as needed. so the platform becomes a sort of central hub for receipt data.
+
+for now third party access is all-or-nothing, but fine-grained permission controls (by org, date range, etc.) can come later.
