@@ -1,0 +1,108 @@
+# raw inputs
+
+these are the raw unedited inputs that were provided to put together the design document- just for transparency and an open look at how the ideas were communicated before being cleaned up.
+
+---
+
+## initial context - cloudflare region routing research
+
+the conversation started with asking about how to pick specific regions for durable objects or workers in cloudflare. here's the breakdown that came out of that:
+
+### workers
+
+- you can't directly pin a region by default
+- cloudflare workers run globally, deployed to ~300+ PoPs worldwide
+- requests execute closest to the user automatically
+- no config like `region=ap-south-1`
+- the only way to constrain is via Regional Services (Data Localization Suite) - enterprise config, not code
+- restrictions: doesn't apply to subrequests, cron, queues. not fine-grained (region groups, not exact city)
+
+### durable objects
+
+- stateful actors, so placement matters
+- default: first request decides the region, then it stays there permanently
+- 3 levels of control:
+
+#### location hint (soft control)
+
+```js
+const stub = env.MY_DO.get(id, { locationHint: "enam" });
+```
+
+available values:
+
+| code | region |
+|------|--------|
+| wnam | western north america |
+| enam | eastern north america |
+| sam | south america |
+| weur | western europe |
+| eeur | eastern europe |
+| apac | asia-pacific |
+| oc | oceania |
+| afr | africa |
+| me | middle east |
+
+- best-effort only, not guaranteed
+- only affects first creation
+- broad geographic clusters, not precise regions
+
+#### jurisdiction (hard control, but coarse)
+
+```js
+const euNamespace = env.MY_DO.jurisdiction("eu");
+```
+
+options: `"eu"` (european union), `"fedramp"` (us compliant infra)
+
+- overrides locationHint
+- very limited options
+
+#### first-request placement (real control in practice)
+
+- trigger the first request from the region you want
+- DO is created near first request and doesn't move later
+
+### placement hints for workers
+
+```toml
+[placement]
+hostname = "api.mybackend.com"
+```
+
+- cloudflare probes the backend and picks lowest-latency PoP automatically
+- global, not per-request. static per deployment.
+
+### what you cannot do
+
+- choose exact country/city
+- move a DO after creation
+- guarantee latency location perfectly
+- pin workers per request manually
+
+---
+
+## the idea - first pass
+
+so my plan is to build this thing so that we can route any specific region that the person mentions, and then also setup retry logic for other regions we want to try to and also a way to monitor the speed sort of right, in which we can reach the specific url they wanna hit like that root maybe? or their api endpoint or something like that, and based on that we can decide the fastest one, i assume? we can't replicate that entire sort of request then it would get duplicated to multiple things right or we need to ask them for the health end point i guess so that we can have a cron trigger to check the specific url and the specific like fastest thing we can get maybe??? i am just thinking... like that would be on the worker level, that's all we can really do right? placement hints is all we can do, and juristictions as well s a additional thing? that's all i guess anything else out here
+
+### corrections and clarifications from research
+
+- can't test by sending real requests to all regions - duplicates writes, triggers side effects, breaks APIs, gets rate limited
+- correct approach: never probe with real traffic
+- 3 real approaches for health checking:
+  - option A: health endpoint (`GET /health`, `GET /ping`, `HEAD /`) - cleanest
+  - option B: synthetic probes (`HEAD` requests) - no side effects, fast, safe
+  - option C: passive latency from real traffic - rolling averages
+- retry logic must separate unsafe (POST/PUT/DELETE) vs safe (GET/HEAD) requests
+- can only retry if idempotent OR backend supports idempotency keys
+
+---
+
+## the idea - refined
+
+THIS IS A CLOUDFLARE WORKERS FOR REDIRECTING THIS SHIT RIGHT, IT WILL BE BUILD ON CLOUDFLARE HONO OR IT MIGHT BE ONLY BARE BONE CLOUDFLARE CODE, AND THEN WE WILL HAVE DURABLE OBJECTS AND WE CAN SORT OF SPECIFY THE DIRECTION IT SHOULD GO RIGHT, WHAT WE ARE GONNA DO IS USE THIS EDGE NETWORK SO THAT WE CAN SEND A REQUEST FROM ANY REGION AND THEN REDIRECT IT AND SEND THAT REQUEST TO A DIFF REGION AND MAKE IT GO, TO whatever the closest data center there is, this will help with compliance and sort of retries or region locked things for example, the original idea was related to retry logic for llm call providers, so that if one region doesn't work we can go to the other region but this can be applied for any sort of requests of sorts, we would be like monitoring the calls we take, and then we will also have like a cron job with a HEAD request to see in all the regions the performance for that specific thing and based on that we will check the latency and maintain that and it will take that into account and do everything if that makes sense, so lets say we pick the one with the fastest thing like that is there like the region sort of right, and then based on that go, and we will have a trigger per minute to check that domain in all of that, we will have a cloudflare kv ttl with like 10 mins which gets refreshed when we re call that domain again, but we check what the performance is for the last min so we can check how it is, i think there is some changes to do, this is the basic idea.
+
+## origin story context
+
+the context of the idea is that i have a interview at WSO2 in the IIT Career Fair 2026, and was being interviewed by https://www.linkedin.com/in/malith-jayasinghe/ so he was asking me about cloudflare ai gateway and i was like retry logic and i didn't understand how they did it so i thought of this sort of a approach for it for the region level thing but i don't think they do that, but yeah.
