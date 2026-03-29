@@ -1,0 +1,33 @@
+# deployment
+
+## local development focus
+
+the validation framework is designed primarily for local developer environments- teams within an organization can run validation checks on their own machines before deployment. developers validate their algorithms and data access patterns in their local workflow without needing cloud infrastructure or external deployment.
+
+the idea is that code changes get checked for permission compliance before being committed or pushed further down the pipeline. catch it early, fix it early.
+
+## the cli
+
+the framework is exposed through a command-line interface tool called `gdpr`, which developers use to orchestrate the entire validation and publishing process.
+
+the flow is straightforward:
+1. run the validator locally against your codebase, schema, and user list
+2. if validation passes- meaning all users in the list passed the cross-reference check with no violations- you can publish
+3. run `gdpr check --publish` to push the validated code
+
+### what happens on publish
+
+when a publish goes through:
+- the docker image of the codebase gets pushed to aws elastic container registry (ecr)
+- aws ecr automatically signs the image upon ingestion
+- the system receives back the image digest- a cryptographic reference to the signed artifact
+- the digest is returned to the developer
+- the signed image is now available to be promoted to the rest of the execution environment downstream
+
+if the mas validation returns a no- the publish command is unavailable and no image gets pushed. only validated and approved algorithms make it to the registry.
+
+## code signing and credentials
+
+the `gdpr` cli tool itself is code-signed to prevent tampering and ensure integrity. when developers execute publish operations, the cli leverages the developer's organization credentials (which grant them push permissions to aws ecr) to authenticate and authorize the image push.
+
+for now- we're assuming the organization user will have credentials set up that allow them to push to ecr, and the cli will use those credentials directly. this is admittedly a rough approach and will need to be refined down the line- potentially looking into better credential management strategies, mfa flows, or centralized permission models that don't require credentials living at the developer level.

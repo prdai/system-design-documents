@@ -1,0 +1,61 @@
+# raw inputs
+
+these are the raw unedited inputs that were provided to put together the design document- just for transparency and an open look at how the ideas were communicated before being cleaned up.
+
+---
+
+## overview
+
+within this document a validation method is proposed to verify that the code that is requested to be executed is valid within the permission scope that is granted by users. this is achieved by first analyzing the permissions required by the algorithm and then cross-referencing those requirements against each user's actual consent records — not just whether a permission exists, but whether the specific data fields are permitted to be used for the specific purpose the algorithm intends. this document assumes that this validation component is executed/ran on DC owned devices.
+
+## introduction
+
+the need for this component is to ensure that the algorithm that the Data Controller requests to be executed using the Data Subjects data is allowed and is within scope of what the Data Controller initially requested/prompted the Data Subject with. this includes verifying that data fields accessed by the algorithm are not only covered by a consent grant in principle, but that the grant explicitly covers the intended use case — for example, confirming that an email field consented to for service notifications is not being used for a marketing campaign without explicit consent for that specific purpose.
+
+## inputs
+
+the validation framework expects the following inputs from the organization prior to running:
+
+- **Codebase** - the algorithm to be validated, mounted as a volume.
+- **Schema of Expected Data** - provided as either a Protobuf definition or a JSON Schema. this schema declares the data fields the algorithm expects to operate on (e.g. `name`, `email`, `date_of_birth`). this is the authoritative definition of what data the algorithm intends to access.
+- **User List** - a JSON file (with an accompanying JSON Schema) containing the list of users this algorithm will be run against. this list is used to look up each user's consent ID and fetch their corresponding consent agreement from the GDPR system for cross-referencing.
+
+## approach (full version)
+
+to resolve this a Multi Agentic System is proposed which utilizes Generative-AI (GenAI) and provides a validation framework for the algorithms organizations want to execute with the users data.
+
+### multi agentic component
+
+![[Pasted image 20260329070031.png]]
+
+the validation system is orchestrated through a composition of specialized AI agents, each leveraging distinct model capabilities to handle different validation phases:
+
+**Planning Agent** - utilizes an advanced reasoning model to decompose the validation task and outline execution steps for the remaining agents. this agent structures the overall validation workflow and ensures coherent sequencing of analysis and verification tasks.
+
+**Analyzer Agent** - deployed using a model with a large context window to perform fine-grained, build-time analysis of the provided codebase. this agent is responsible for code inspection, identifying external dependencies, and understanding algorithmic behavior. it has access to web search and page fetching capabilities to research unknown dependencies, SDKs, or packages, as well as code execution to test and verify specific functions in isolation and identify their behavior.
+
+**Execution Agent** - manages runtime validation within a containerized environment. the agent instantiates a Docker build of the codebase using the provided schema to generate schema-specific test data, and executes the algorithm under observed conditions. it asynchronously observes the running Docker build using system-level observability tooling to capture computational resource usage, syscalls, and network activity. the codebase exposes a singular entry point — either a CLI call or an HTTP endpoint — which the agent invokes to exercise the algorithm's runtime behavior, with all observations collected for downstream synthesis.
+
+**Algorithm Permissions Identification Agent** - focuses specifically on the codebase's permission and data access profile. using the combined output of both the Analyzer Agent and the Execution Agent — covering both static code analysis and observed runtime behavior — this agent identifies the specific ways in which schema variables are accessed and utilized by the algorithm, determining what data fields are read, written, or transmitted, and under what conditions. the output of this agent is a structured mapping of the algorithm's actual data access and permission requirements, which is then passed downstream for per-user cross-referencing.
+
+**User Permissions Cross Reference Agent** - operates as a per-user validation flow. for each user in the provided user list, this agent fetches the user's consent agreement from the GDPR system — this is the original document or specification that the organization provided to the user, detailing what data would be collected and for what purposes. it then cross-references this against the structured permission and data access requirements identified by the Algorithm Permissions Identification Agent. to support accurate interpretation of consent language and wording, this agent is backed by a knowledge base (RAG) of consent form understanding — covering common phrasing, legal wording patterns, and purpose categorizations — allowing it to reason correctly about what a given consent agreement does and does not cover. the agent checks not only whether the required data fields are covered by the user's consent, but whether the *purpose* of their use in the algorithm aligns with what was actually consented to. for example, if an algorithm uses an email field to send marketing content, the agent verifies that the user's consent explicitly covers use of their email for marketing purposes — not just that an email permission exists. this process runs per user and the output is updated incrementally: any user whose consent does not cover the algorithm's requirements is flagged as a violation, along with the specific reasoning behind that user's violation. if all users pass, the algorithm is considered valid.
+
+this layered approach separates concerns across analysis phases - static code analysis, runtime observation, and per-user consent cross-referencing - enabling comprehensive coverage of validation requirements while maintaining modularity and auditability.
+
+## deployment architecture - local development focus
+
+the validation framework is designed primarily for local developer environments where teams within an organization can run validation checks on their own machines before deployment. this approach allows developers to validate their algorithms and data access patterns in their local development workflow without requiring cloud infrastructure or external deployment. the local validation ensures that code changes are checked for permission compliance before being committed or pushed further down the pipeline.
+
+## CLI-driven publishing workflow
+
+the validation framework is exposed through a command-line interface tool called `gdpr`, which developers use to orchestrate the entire validation and publishing process. developers run the validator locally against their codebase, schema, and user list. if the validation returns a yes decision — meaning all users in the provided list passed the cross-reference check with no violations — the developer can then execute `gdpr check --publish` to proceed with publishing the validated code.
+
+upon a successful publish command, the Docker image of the codebase is pushed to AWS Elastic Container Registry (ECR). AWS ECR automatically signs the image upon ingestion, and the system receives back the image digest as a cryptographic reference to the signed artifact. this image digest is returned to the developer, and the signed image is now available to be promoted to the rest of the execution environment downstream.
+
+the publish workflow ensures that only validated and approved algorithms are pushed to the registry - if the MAS validation returns no, the publish command is unavailable and no image is pushed.
+
+## code signing and credential management
+
+the `gdpr` CLI tool itself is code-signed to prevent tampering and ensure integrity. when developers execute publish operations, the CLI leverages the developer's organization credentials (which grant them push permissions to AWS ECR) to authenticate and authorize the image push. the CLI uses these credentials to sign off on the push operation.
+
+for now, we're assuming the organization user will have credentials set up that allow them to push to ECR, and the CLI will use those credentials directly. however, we recognize this is a rough approach and we'll need to refine this in the future - potentially looking into better credential management strategies, MFA flows, or centralized permission models that don't require hardcoding credentials at the developer level.
