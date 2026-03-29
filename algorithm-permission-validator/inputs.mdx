@@ -1,0 +1,19 @@
+# inputs
+
+the validation framework expects three things from the organization before it can do anything.
+
+## codebase
+
+the algorithm to be validated- mounted as a volume. this is the actual code that the framework will analyze both statically and at runtime to figure out what it's doing with user data.
+
+## schema of expected data
+
+provided as either a protobuf definition or a json schema. this declares the data fields the algorithm expects to operate on- things like `name`, `email`, `date_of_birth`, whatever the algorithm needs.
+
+this is the authoritative definition of what data the algorithm intends to access. if the algorithm tries to touch something not in this schema, that's already a problem before we even get to consent checking.
+
+## user list
+
+a json file (with an accompanying json schema) containing the list of users this algorithm will be run against. each entry includes enough info to look up that user's consent id and fetch their corresponding consent agreement from the gdpr system.
+
+this is what enables the per-user cross-referencing- without it we can't check individual consent records against what the algorithm actually does.

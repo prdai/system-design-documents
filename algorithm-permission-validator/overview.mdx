@@ -1,0 +1,15 @@
+# overview
+
+## what this is
+
+this is a validation method for verifying that code requested to be executed is actually within the permission scope granted by users. it works by analyzing the permissions an algorithm requires and then cross-referencing those requirements against each user's actual consent records- not just whether a permission exists, but whether the specific data fields are permitted to be used for the specific purpose the algorithm intends.
+
+the whole thing runs on data controller (DC) owned devices.
+
+## why this is needed
+
+when a data controller wants to run an algorithm using data subject data, there needs to be a way to ensure that what the algorithm does is actually within scope of what was originally consented to. it's not enough to check "does the user have a consent record"- you need to verify that the fields being accessed are covered, and that the purpose of access matches what the user agreed to.
+
+for example- say a user consented to their email being used for service notifications. if an algorithm comes along and uses that same email field for a marketing campaign, that's a violation- even though technically an email permission exists. the consent was for notifications, not marketing. that's the kind of thing this catches.
+
+this component sits between the algorithm and the user data, making sure nothing runs unless it's genuinely within bounds.
