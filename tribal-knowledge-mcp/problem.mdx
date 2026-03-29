@@ -1,0 +1,30 @@
+# the problem
+
+knowledge in engineering teams is fragmented, informal, and almost always lost.
+
+## the tribal knowledge gap
+
+every team has unwritten rules- "don't use that orm for batch jobs, it leaks connections", "the payments api returns 200 even on failure, check the body", "we tried microservices for auth and rolled it back in q2". this stuff is critical context, but it lives in people's heads, buried in slack threads, or scattered across outdated confluence pages nobody maintains.
+
+when someone leaves, or a new person joins, the knowledge gap is real. onboarding docs cover the basics, but the real stuff- the why behind decisions, the gotchas, the things that only make sense after you've been burned once- that doesn't transfer.
+
+## wikis don't solve this
+
+the standard answer is documentation- write it down, put it in a wiki, maintain a knowledge base. and sure, that helps in theory. but in practice:
+
+- people don't write things down in the moment because they're busy shipping
+- when they do write it down, it goes stale fast
+- even if it's up to date, nobody checks the wiki mid-task when they're actually making a decision
+- search in most wikis is keyword-based and terrible for finding contextual knowledge
+
+the knowledge exists somewhere, but it's never in the right place at the right time.
+
+## the timing problem
+
+this is the real issue- tribal knowledge is most valuable at the point of decision. when you're choosing a library, structuring a service, or debugging something weird. that's when you need to know "hey, we tried this before and here's what happened."
+
+but that's exactly when nobody thinks to check documentation. you're in flow, in your editor, in your terminal. the wiki is three tabs and a search query away, and you probably don't even know the right thing to search for.
+
+## what this means
+
+teams end up re-discovering things. making the same mistakes. having the same debates. not because the knowledge doesn't exist, but because there's no good mechanism to surface it where and when it matters.

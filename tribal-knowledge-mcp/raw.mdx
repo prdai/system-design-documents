@@ -1,0 +1,97 @@
+# raw inputs
+
+these are the raw unedited inputs that were provided to put together the design document- just for transparency and an open look at how the ideas were communicated before being cleaned up.
+
+---
+
+## initial brain dump (2026-03-29)
+
+Every organization leaks knowledge. A senior engineer makes a call at 2pm on a Tuesday — "we're not using library X because of Y" — and that decision lives in their head, maybe in a Slack thread, probably nowhere useful. When they leave, or when a new team member joins, that context is gone.
+
+This is **tribal knowledge** — the informal, undocumented understanding that experienced people carry around and pass on informally. It's hard to capture, harder to search, and almost impossible to actually *use* at the right moment.
+
+---
+
+## The Idea
+
+Make tribal knowledge a first-class citizen by giving it an MCP server — so that AI coding agents (Claude Code, OpenCode, etc.) can *query it as a tool*, right in the context where decisions actually get made.
+
+Instead of a wiki nobody reads, you get knowledge that surfaces when it's relevant.
+
+---
+
+## Architecture
+
+![[Pasted image 20260329085717.png]]
+
+### Components
+
+#### 1. Agent Skill (`skills.sh`)
+The entry point for the agent. A skill registered with Claude Code (or compatible tooling) that wires up the MCP connection. This is the integration layer — the thing that makes the knowledge base *available* to the agent as a callable tool rather than a separate lookup step.
+
+This integration is the key part of the project. Without it, the KB is just a database. With it, it becomes something the agent can reach for naturally mid-task.
+
+#### 2. Tribal KB MCP Server (C++)
+The core of the project. An MCP-compliant server that exposes tools for storing and querying tribal knowledge. Communicates over SSE or stdio depending on the client.
+
+Implemented in **C++** — both as a learning exercise and because it's a natural fit for FAISS, which is a native C++ library.
+
+Tools exposed (conceptually):
+- `store_knowledge` — capture a decision, context, or piece of know-how
+- `query_knowledge` — semantic search over what's been stored
+- `list_recent` — surface recently added entries
+
+#### 3. FAISS Vector Database (in-memory, C++)
+Handles the RAG (Retrieval-Augmented Generation) component. Embeddings are stored in-memory using FAISS, which is fast and natively C++, making it a clean fit for this stack.
+
+Text gets embedded → stored in FAISS → queried by semantic similarity when the agent asks a question.
+
+---
+
+## Key Integration: Agent ↔ MCP
+
+The most important piece technically is the **agent skill ↔ MCP server integration**.
+
+The skill definition tells the agent:
+- that this tool exists
+- how to call it
+- what it returns
+
+The MCP server handles the actual knowledge retrieval. The agent doesn't need to know about FAISS or embeddings — it just calls a tool and gets relevant context back.
+
+---
+
+## Deployment
+
+Everything is **Dockerized**. The MCP server + FAISS run in a container, making it portable and easy to attach to any agent setup.
+
+```
+docker-compose up
+# → Tribal KB MCP server running, ready for agent connections
+```
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Agent integration | Claude Code / OpenCode + `skills.sh` |
+| MCP protocol | SSE / stdio |
+| KB Server | C++ |
+| Vector store | FAISS (C++, in-memory) |
+| Deployment | Docker |
+
+---
+
+## What This Is (and Isn't)
+
+This is a **conceptual + learning project**. The architecture is intentionally simple — there are more sophisticated approaches to knowledge management, better embedding strategies, more robust persistence layers. That's not the point.
+
+The point is:
+
+1. **The concept** — tribal knowledge should be queryable by the tools engineers actually use
+2. **The integration** — wiring an agent skill to an MCP server is a real, useful pattern worth understanding hands-on
+3. **The C++ practice** — using FAISS natively and building an MCP server in C++ as a technical learning exercise
+
+It works. And sometimes that's what matters.
