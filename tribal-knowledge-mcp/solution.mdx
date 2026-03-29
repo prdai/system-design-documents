@@ -17,8 +17,6 @@ someone (or the agent itself) stores a piece of knowledge deliberately. this is 
 
 the `store_knowledge` tool takes:
 - the knowledge itself (text)
-- optional tags or categories
-- optional source context (who, when, what prompted it)
 
 ### 2. organic accumulation
 over time, as teams use the system, the knowledge base grows. the barrier to entry is low- you're already talking to the agent, so capturing a decision is just one more message in the conversation.
@@ -53,7 +51,6 @@ each entry has:
 - content (the actual knowledge, in natural language)
 - embedding (generated from the content, stored in faiss)
 - timestamp (when it was captured)
-- optional metadata (tags, source, author)
 
 ## requirements
 
@@ -68,6 +65,12 @@ each entry has:
 - support for both sse and stdio transport
 - basic deduplication or similarity check on store
 - metadata filtering on queries (by tag, date range, etc.)
+
+## future direction
+
+the system is designed to be easily integrated with other tools down the line. slack is a natural fit- a lot of tribal knowledge already lives in slack threads, so having a way to pipe that into the knowledge base (or query it from slack) makes sense.
+
+more broadly, the goal is that the knowledge stored here can be easily consumed by whatever tools teams are already using- not just ai agents but anything that could benefit from having that context available.
 
 ## what this is and isn't
 

@@ -8,7 +8,7 @@
 | mcp protocol | sse / stdio |
 | kb server | c++ |
 | vector store | faiss (c++, in-memory) |
-| embeddings | external api (openai or similar) |
+| embeddings | not finalized (local or external api) |
 | deployment | docker |
 
 c++ was chosen for two reasons- it's a learning exercise, and faiss is a native c++ library so there's no binding overhead or ffi weirdness.
@@ -38,15 +38,15 @@ the server implements the mcp protocol and exposes three tools:
 takes a piece of knowledge (text), generates an embedding for it (via an external api call), and stores both the text and the embedding in faiss.
 
 ```
-input:  { content: string, tags?: string[], source?: string }
+input:  { content: string }
 output: { id: string, status: "stored" }
 ```
 
 flow:
 1. receive content from agent
-2. call embedding api to get vector representation
+2. call embedding model to get vector representation
 3. store vector in faiss index
-4. store metadata (content, tags, timestamp) alongside the faiss id
+4. store metadata (content, timestamp) alongside the faiss id
 5. return confirmation
 
 ### `query_knowledge`
@@ -55,37 +55,44 @@ takes a natural language question, embeds it, and finds the most similar entries
 
 ```
 input:  { query: string, limit?: number }
-output: { results: [{ content: string, score: float, metadata: object }] }
+output: { results: [{ content: string, score: float, timestamp: string }] }
 ```
 
 flow:
 1. receive query from agent
-2. call embedding api to get vector for the query
+2. call embedding model to get vector for the query
 3. search faiss index for nearest neighbors
 4. return matched entries with similarity scores
 
 ### `list_recent`
 
-returns the most recently stored entries, optionally filtered by tags.
+returns the most recently stored entries.
 
 ```
-input:  { limit?: number, tags?: string[] }
-output: { entries: [{ content: string, timestamp: string, tags: string[] }] }
+input:  { limit?: number }
+output: { entries: [{ content: string, timestamp: string }] }
 ```
 
 ## faiss setup
 
-faiss is used in its simplest mode- `IndexFlatL2` for exact l2 distance search. this is fine for the scale this project operates at (hundreds to low thousands of entries). if it needed to scale, you'd swap to `IndexIVFFlat` or `IndexHNSW` for approximate search.
+the faiss index type isn't finalized yet- it depends on the expected scale of the knowledge base. some options:
+
+- **IndexFlatL2**: exact l2 distance search. simple and accurate, works well for hundreds to low thousands of entries.
+- **IndexIVFFlat**: approximate search with inverted file index. better suited for tens of thousands of entries and above.
+- **IndexHNSW**: graph-based approximate search. fast queries, higher memory usage. good for large scale.
 
 the index lives in memory. on shutdown, it can be serialized to disk using faiss's built-in `write_index` / `read_index` for persistence across restarts.
 
-metadata (the actual text, tags, timestamps) is stored separately in a simple in-memory map keyed by the faiss vector id. this gets serialized alongside the index.
+metadata (the actual text and timestamps) is stored separately in a simple in-memory map keyed by the faiss vector id. this gets serialized alongside the index.
 
 ## embedding generation
 
-the server doesn't generate embeddings itself- it calls an external embedding api (openai's `text-embedding-3-small` or similar). this keeps the c++ side focused on mcp protocol handling and vector storage, without needing to bundle a model.
+the embedding provider isn't finalized yet. two directions are on the table:
 
-the embedding dimension needs to match the faiss index dimension. for `text-embedding-3-small` that's 1536.
+- **local model** (e.g. sentence-transformers): runs inside the docker container, no external api dependency. heavier image but fully self-contained.
+- **external api** (e.g. openai, voyage ai): keeps the c++ side lighter, just makes an api call. requires an api key and external dependency.
+
+either way, the embedding dimension needs to match the faiss index dimension- that'll be determined by whichever model is chosen.
 
 ## agent skill
 
@@ -98,26 +105,7 @@ for claude code specifically, this means adding the mcp server config so the age
 
 ## deployment
 
-everything runs in docker.
-
-```yaml
-# docker-compose.yml (conceptual)
-services:
-  tribal-kb:
-    build: .
-    ports:
-      - "8080:8080"
-    environment:
-      - EMBEDDING_API_KEY=${EMBEDDING_API_KEY}
-      - EMBEDDING_MODEL=text-embedding-3-small
-    volumes:
-      - kb-data:/data  # for faiss index persistence
-
-volumes:
-  kb-data:
-```
-
-the container runs the mcp server, which handles both the mcp protocol and the faiss operations. a volume mount handles persistence of the faiss index and metadata between restarts.
+everything runs in docker. the container runs the mcp server, which handles both the mcp protocol and the faiss operations. portable and easy to attach to any agent setup.
 
 ## transport
 
