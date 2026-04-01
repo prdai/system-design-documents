@@ -1,0 +1,82 @@
+# solution & requirements
+
+the solution is to make tribal knowledge queryable by ai coding agents- so it surfaces in the context where decisions actually get made, rather than sitting in a wiki nobody opens.
+
+## the concept
+
+instead of a separate knowledge base that engineers have to actively go look at, the knowledge lives behind an mcp server. ai coding agents (claude code, opencode, cursor, etc.) can call it as a tool- just like they'd call a file reader or a web search. the agent reaches for the knowledge naturally when it's relevant.
+
+you're working on something, the agent sees context that matches stored knowledge, and it pulls it in. no tab switching, no searching, no hoping you asked the right person.
+
+## how knowledge gets in
+
+there are two main ways knowledge enters the system:
+
+### 1. explicit capture
+someone (or the agent itself) stores a piece of knowledge deliberately. this is for the big stuff- architectural decisions, post-mortems, "we tried X and here's why it didn't work" kind of things.
+
+the `store_knowledge` tool takes:
+- the knowledge itself (text)
+
+### 2. organic accumulation
+over time, as teams use the system, the knowledge base grows. the barrier to entry is low- you're already talking to the agent, so capturing a decision is just one more message in the conversation.
+
+## how knowledge gets out
+
+the core retrieval is semantic search. when you (or the agent) query the knowledge base, it doesn't do keyword matching- it finds things that are semantically similar to what you're asking about.
+
+the `query_knowledge` tool takes a natural language question and returns the most relevant entries. the agent can then use that context to inform its response.
+
+there's also `list_recent` for browsing what's been added lately- useful for keeping up with what the team has been capturing.
+
+## the mcp server
+
+the server is the core component. it's mcp-compliant, meaning any agent that speaks mcp can connect to it. it handles:
+
+- storing knowledge entries with their embeddings
+- semantic search over stored knowledge using faiss
+- listing and filtering entries
+
+it communicates over sse or stdio depending on the client setup.
+
+## the agent skill
+
+the agent skill (`skills.sh`) is the integration layer- it registers the mcp server as a tool the agent can use. this is what makes the difference between "a database of knowledge" and "knowledge that the agent can reach for mid-task."
+
+without the skill, you have a vector database. with it, you have contextual knowledge retrieval built into the development workflow.
+
+## what a knowledge entry looks like
+
+each entry has:
+- content (the actual knowledge, in natural language)
+- embedding (generated from the content, stored in faiss)
+- timestamp (when it was captured)
+
+## requirements
+
+### must have
+- mcp-compliant server with `store_knowledge`, `query_knowledge`, and `list_recent` tools
+- semantic search using faiss vector similarity
+- agent skill that registers the mcp server as a callable tool
+- dockerized deployment
+
+### nice to have
+- persistence across restarts (faiss index serialization)
+- support for both sse and stdio transport
+- basic deduplication or similarity check on store
+- metadata filtering on queries (by tag, date range, etc.)
+
+## future direction
+
+the system is designed to be easily integrated with other tools down the line. slack is a natural fit- a lot of tribal knowledge already lives in slack threads, so having a way to pipe that into the knowledge base (or query it from slack) makes sense.
+
+more broadly, the goal is that the knowledge stored here can be easily consumed by whatever tools teams are already using- not just ai agents but anything that could benefit from having that context available.
+
+## what this is and isn't
+
+this is a conceptual and learning project. the architecture is intentionally simple- there are better embedding strategies, more robust persistence layers, fancier retrieval approaches. that's not the point.
+
+the point is:
+1. the concept- tribal knowledge should be queryable by the tools engineers use
+2. the integration- wiring an agent skill to an mcp server is a useful pattern worth understanding hands-on
+3. the c++ practice- using faiss natively and building an mcp server in c++ as a learning exercise
