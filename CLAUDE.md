@@ -13,3 +13,8 @@
 - this is for transparency- an open look at how the ideas were communicated before being cleaned up
 - always create and update this file when writing or updating the design document sections
 - every time new inputs are provided in a conversation, append them to the raw.mdx file for that design document- don't skip this across any interaction
+
+## model attribution
+
+- when referencing the ai model used, use the general name (e.g. "Claude") not the specific model id (e.g. not "claude-sonnet-4-6" or "Claude Opus 4.6")
+- keep it simple and casual- just say claude, not the versioned name
