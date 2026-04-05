@@ -1,0 +1,13 @@
+# why i thought of this idea
+
+there are videos i want to "read" not watch.
+
+a 3-hour conference talk has maybe 20 minutes of content i actually care about. i don't want to watch the whole thing to find it- but i also can't just skip to the good parts because i don't know where they are.
+
+and then there's the retrieval problem after the fact. i'll half-watch something, close the tab, and a week later realize i actually needed that information. now i have to either re-watch it or just not have it.
+
+the obvious answer is "use the transcript"- and youtube does expose transcripts. but raw transcripts are pretty rough. no punctuation, dense walls of text, speaker cross-talk. they're not really readable, and they're definitely not queryable in any useful way.
+
+so the idea is- pull the transcript, chunk it up properly, throw it into a vector store, and then just ask it questions. point the whole thing at a local model or openrouter so it's fully self-contained. no subscriptions, no third-party data handling, just a URL in and a conversation out.
+
+the goal is to be able to drop any youtube link and immediately have a conversation with it- ask what the key points are, go deep on a specific claim, or just get a summary of the whole thing. same value as watching it, fraction of the time.
