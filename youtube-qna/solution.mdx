@@ -1,0 +1,47 @@
+# solution & requirements
+
+a self-hostable q&a platform that turns any youtube video into something you can actually have a conversation with.
+
+## the concept
+
+paste a youtube url, the system pulls the transcript, chunks it, embeds it, and drops it in a local vector store. from there you can ask it anything- get a summary, drill into a specific topic, ask follow-up questions. the llm is either a local model or routed through openrouter, your choice.
+
+no cloud dependency. runs on your machine. your data stays local.
+
+## how it works end to end
+
+1. user pastes a youtube url into the ui
+2. system pulls the transcript via `youtube-transcript-api`
+3. transcript gets chunked into overlapping segments (with timestamps where possible)
+4. chunks get embedded and stored in a local vector store
+5. user asks a question
+6. relevant chunks are retrieved via semantic similarity
+7. retrieved chunks + question go to the llm
+8. llm answers based on the actual transcript content
+
+## model flexibility
+
+the llm layer is pluggable:
+
+- **openrouter**: routes to whatever model you want (gpt-4o, claude, mistral, etc.) through a single api. useful if you have an openrouter key but don't want to manage multiple api keys.
+- **local model**: runs fully offline via ollama or llama.cpp. nothing leaves your machine.
+
+the system should make switching between these straightforward- ideally just a config change.
+
+## requirements
+
+### must have
+- youtube url input → transcript extraction via `youtube-transcript-api`
+- transcript chunking with overlap for coherent context windows
+- vector store for semantic retrieval (local)
+- q&a interface over the retrieved chunks
+- support for openrouter as the llm backend
+- support for local models (ollama)
+- self-hostable via docker
+
+### nice to have
+- timestamp-aware retrieval (link back to the moment in the video)
+- multi-video support (ask across a collection)
+- persistent storage so you don't re-process videos you've already loaded
+- summary generation on ingest (get the tldr without asking)
+- simple web ui (doesn't need to be fancy)

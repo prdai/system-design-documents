@@ -1,0 +1,119 @@
+# technical design
+
+## tech stack
+
+| layer | technology |
+|---|---|
+| transcript extraction | `youtube-transcript-api` (python) |
+| chunking | sliding window with overlap |
+| embeddings | local model via `sentence-transformers` or api |
+| vector store | chroma (local, persistent) |
+| llm backend | openrouter api or ollama |
+| api layer | fastapi |
+| ui | simple web frontend (or cli) |
+| deployment | docker / docker-compose |
+
+## architecture overview
+
+```
+user
+  ↓ youtube url
+transcript service (youtube-transcript-api)
+  ↓ raw transcript text + timestamps
+chunker
+  ↓ overlapping chunks with metadata
+embedding model
+  ↓ vectors
+chroma vector store (persistent)
+  ↑ semantic search on query
+retriever
+  ↓ top-k relevant chunks
+llm (openrouter or ollama)
+  ↓ answer grounded in transcript
+user
+```
+
+## transcript extraction
+
+`youtube-transcript-api` handles the heavy lifting here- it fetches auto-generated or manually uploaded captions directly from youtube without needing any api key. it returns a list of text segments with start timestamps and durations.
+
+```python
+from youtube_transcript_api import YouTubeTranscriptApi
+
+transcript = YouTubeTranscriptApi.get_transcript(video_id)
+# [{ "text": "...", "start": 12.34, "duration": 3.5 }, ...]
+```
+
+the raw transcript gets reassembled into a single text (or kept segment-aware for timestamp retrieval) before chunking.
+
+## chunking
+
+the transcript gets split into overlapping chunks. the overlap is important- concepts don't respect arbitrary split points, and without overlap you'll lose context at chunk boundaries.
+
+rough approach:
+- target chunk size: ~400-500 tokens
+- overlap: ~50-100 tokens
+- metadata stored per chunk: video id, start timestamp, end timestamp
+
+the timestamp metadata is useful for linking back- "this answer came from around 1:23:45 in the video."
+
+## vector store
+
+chroma is a good fit here- it's local, persistent, and easy to set up without running a separate service. it handles both the vector storage and the similarity search.
+
+each collection maps to a video. this makes it easy to isolate or combine videos later.
+
+## embedding
+
+two options:
+
+- **local**: `sentence-transformers` (e.g. `all-MiniLM-L6-v2`). runs inside the container, no api dependency, reasonable quality.
+- **api**: openai embeddings or similar. better quality, but adds a network call and key requirement.
+
+for a fully self-hosted setup, local embeddings are the default.
+
+## llm backend
+
+the llm call is made with the retrieved chunks as context:
+
+```
+[system prompt: answer based only on the provided transcript excerpts]
+[context: chunk 1, chunk 2, chunk 3...]
+[user: what did they say about X?]
+```
+
+**openrouter**: single api endpoint, model is configurable in `.env`. anything openrouter supports just works.
+
+**ollama**: runs a local model server. the fastapi backend calls ollama's api at `localhost:11434`. model is also configurable.
+
+the backend abstracts both behind a common interface so swapping is just a config change.
+
+## api
+
+fastapi handles the backend. key endpoints:
+
+- `POST /ingest` — takes a youtube url, runs extraction + chunking + embedding, returns video id
+- `POST /query` — takes a video id + question, returns answer + source chunks
+- `GET /videos` — lists ingested videos
+
+## persistence
+
+chroma persists its index to disk by default. this means you only process a video once- subsequent queries go straight to the vector store.
+
+## deployment
+
+```yaml
+# docker-compose.yml (rough)
+services:
+  api:
+    build: .
+    ports: ["8000:8000"]
+    volumes:
+      - ./data:/data  # chroma index lives here
+    environment:
+      - LLM_BACKEND=openrouter  # or ollama
+      - OPENROUTER_API_KEY=...
+      - OLLAMA_MODEL=llama3
+```
+
+for ollama, it either runs as a separate container or points to a host ollama instance.
