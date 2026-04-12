@@ -1,0 +1,11 @@
+# why i thought of this idea
+
+it started at an interview at the wso2 booth at the iit career fair 2026- being asked about cloudflare ai gateway and how they handle retry logic. the answer i gave was something about retrying at the region level when a model provider goes down in one area, and i didn't really know if that's how they actually do it, but the idea stuck.
+
+the more i thought about it, the more it seemed like a real gap. cloudflare workers run globally and you get fast edge execution, but there's no native way to say "send this specific request through the europe region" at the code level. the infrastructure is there- the edge nodes exist, durable objects have region hints, jurisdictions exist for compliance- but there's no clean proxy layer that ties it all together.
+
+and the retry angle is genuinely useful beyond just llms. region-locked apis, compliance requirements, failover when a region degrades- all of that could benefit from a proxy that's aware of regions and latency.
+
+so the idea became: build the missing layer. a cloudflare workers proxy that routes to specific regions, monitors latency across all of them via a background cron, and uses the freshest latency data to pick the fastest region automatically when that's what you want.
+
+the origin story context for completeness- this came out of a wso2 interview conversation at the iit career fair 2026. the interviewer asked about cloudflare ai gateway. i gave an answer about region-level retry logic and then went and figured out whether it was actually possible.

@@ -1,0 +1,32 @@
+# the problem
+
+cloudflare workers are fast, globally distributed, and easy to deploy. but the region routing story is basically nonexistent at the request level.
+
+## no per-request region control for workers
+
+workers run at the nearest PoP to whoever's making the request. that's great for general latency, but it means you can't say "this request should go through eastern north america" from application code. the only tool that approximates this is placement hints- and those are static per deployment, not per request.
+
+durable objects have `locationHint` and `jurisdiction`, but those are soft controls for state placement, not request routing. they're also best-effort for hints, and hard controls are limited to two coarse options (eu, fedramp).
+
+## the latency visibility gap
+
+there's no built-in way to know how fast your target api or service responds from each cloudflare region. cloudflare can tell you a lot about edge performance, but it doesn't expose "here's what your upstream looks like from wnam vs apac."
+
+if you're trying to route intelligently- pick the fastest region for a given target, or understand where latency is coming from- you have to measure it yourself.
+
+## retry logic is region-blind
+
+when a request fails or a region degrades, the only real option in standard workers is to retry the same request. there's no awareness of "maybe enam is slow right now, try weur." you either retry in place or you don't retry at all.
+
+for use cases like llm provider calls (where a model might be throttled or slow in one region), or compliance-sensitive routing (where traffic must stay in certain jurisdictions), or just basic resilience- this is a meaningful gap.
+
+## what's missing
+
+a lightweight, programmable layer that:
+- routes requests to specific cloudflare regions on demand
+- monitors real latency from each region to a target url
+- surfaces the fastest region automatically based on fresh measurements
+- handles retries across regions intelligently
+- respects jurisdiction constraints when they matter
+
+none of this exists as a built-in primitive on cloudflare. it has to be built.
