@@ -8,13 +8,59 @@
 | map rendering | google maps / mapbox js / tbd |
 | auth / access control | cloudflare access |
 | ui design | stitch |
+| ai inference | cloudflare workers ai |
+| semantic search / embeddings | cloudflare vectorize or ai search (tbd) |
+| file storage | cloudflare r2 (most likely) |
+
+## data model
+
+### date
+
+a specific calendar day. has one or more events.
+
+| field | type | notes |
+|---|---|---|
+| id | string | unique id |
+| date | date | the calendar day |
+| events | event[] | all the stops/moments of that day |
+
+### event
+
+a single stop or moment within a date.
+
+| field | type | notes |
+|---|---|---|
+| id | string | unique id |
+| date_id | string | which date this belongs to |
+| datetime | timestamp | when it happened |
+| location | { lat, lng, address } | where it happened |
+| description | string | free-form text about what happened |
+| attachments | attachment[] | images, videos, audio |
+
+### attachment
+
+| field | type | notes |
+|---|---|---|
+| id | string | unique id |
+| event_id | string | which event this belongs to |
+| type | "image" \| "video" \| "audio" | media type |
+| url | string | r2 url (or signed url) |
+
+## chatbot architecture
+
+events (descriptions, locations, timestamps) get embedded and indexed in cloudflare vectorize or ai search. when a user sends a message, it does a semantic search to pull relevant events, then cloudflare workers ai does inference with that context to generate a response.
+
+rough flow:
+1. user sends a message
+2. embed the query → vectorize/ai search lookup → fetch relevant event data
+3. send event context + query to workers ai
+4. return the response
 
 ## what still needs to be figured out
 
 - which map library to go with (google maps, mapbox, or something else)
-- database and storage
-- how memories/dates get added and stored
-- the data model
-- how the day flow visualization actually works technically
-- hosting and deployment details
-- everything else basically- this is early stage
+- database for structured data (d1 most likely but tbd)
+- exact embedding model and indexing strategy
+- how memories/dates get added and edited in the ui
+- the day flow visualization details
+- hosting and deployment
