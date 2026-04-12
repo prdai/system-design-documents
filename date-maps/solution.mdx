@@ -1,0 +1,37 @@
+# solution & requirements
+
+a website protected behind cloudflare access that shows a map with clusters of dates and memories.
+
+## the general idea
+
+- built on next.js
+- uses google maps, mapbox js, or whatever map library works best for this (not decided yet)
+- shows a map of the world with clusters of dates/memories marked on it
+- you can filter by day and see the flow of that day- where you went first, where you went next, the whole route
+- protected behind cloudflare access so only the people you want can see it
+
+## ui
+
+planning to use stitch to design the ui and add components- that part is still to be figured out.
+
+## dates and events
+
+a **date** is a specific calendar day. each date can have multiple **events**- an event is basically a single place/stop within that day.
+
+each event has:
+- **date + time** - when it happened
+- **location** - where (pin on the map, lat/lng + address)
+- **description** - what happened, free-form text
+- **attachments** - images, videos, and audio files tied to that moment
+
+the flow view of a day is just the events of that date ordered by time, connected on the map- shows the route you took and when.
+
+## chatbot
+
+there's a chatbot that lets you ask questions across all your memories- "where did we go on our first date?", "what did we do in december?", that kind of thing.
+
+powered by cloudflare workers ai (inference) + cloudflare vectorize or ai search (semantic search over event data). the idea is that event descriptions, locations, and metadata get embedded and indexed, and the chatbot can do a semantic lookup before answering.
+
+## what still needs thinking through
+
+the storage layer for attachments (r2 most likely), the exact embedding strategy, how events get added/edited in the ui, and a bunch of other implementation details are still tbd.
