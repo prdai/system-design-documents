@@ -1,0 +1,12 @@
+# references
+
+things that were used or referenced while putting this together.
+
+- [cloudflare workers overview](https://developers.cloudflare.com/workers/) - the runtime this whole thing runs on
+- [durable objects - data location](https://developers.cloudflare.com/durable-objects/reference/data-location/) - supported location hints and jurisdictions for durable objects, the core mechanism for region routing
+- [durable objects - location hints](https://developers.cloudflare.com/durable-objects/reference/data-location/#provide-a-location-hint) - how to pass `locationHint` when getting a do stub
+- [durable objects - jurisdictions](https://developers.cloudflare.com/durable-objects/reference/data-location/#restrict-durable-objects-to-a-jurisdiction) - `eu` and `fedramp` jurisdiction controls
+- [cloudflare kv](https://developers.cloudflare.com/kv/) - the key-value store used for latency state
+- [cloudflare cron triggers](https://developers.cloudflare.com/workers/configuration/cron-triggers/) - how to schedule the background latency monitor
+- [cloudflare workers - smart placement](https://developers.cloudflare.com/workers/configuration/smart-placement/) - placement hints at the deployment level (different from per-request, included for contrast)
+- [cloudflare ai gateway](https://developers.cloudflare.com/ai-gateway/) - the product that sparked the original idea about retry logic at the region level

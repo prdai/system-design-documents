@@ -1,0 +1,79 @@
+# solution & requirements
+
+a cloudflare workers-based regional proxy that routes requests to specific regions, monitors latency via a background cron, and automatically selects the fastest region using fresh measurements stored in kv.
+
+## the concept
+
+the proxy sits in front of any upstream url. when a request comes in, you either:
+
+1. **specify a region** - the request gets routed through that exact cloudflare region via a durable object with a location hint or jurisdiction
+2. **use auto mode** - the proxy picks the fastest region based on the latest latency data from the background cron
+
+latency data is stored in cloudflare kv with a 10-minute ttl, refreshed each time the cron runs. the cron fires every minute and sends `HEAD` requests to the target url from each supported region- safe, low-overhead, no side effects.
+
+## region selection
+
+### supported regions
+
+cloudflare durable objects support the following location hints:
+
+| code | location |
+|------|----------|
+| wnam | western north america |
+| enam | eastern north america |
+| sam | south america |
+| weur | western europe |
+| eeur | eastern europe |
+| apac | asia-pacific |
+| oc | oceania |
+| afr | africa |
+| me | middle east |
+
+### jurisdiction constraints
+
+on top of region hints, users can also specify a jurisdiction for hard compliance requirements:
+
+| code | jurisdiction |
+|------|--------------|
+| eu | european union |
+| fedramp | fedramp-compliant data centers |
+
+jurisdiction overrides region hint when set. these are coarse controls but useful for compliance scenarios.
+
+## latency monitoring
+
+the cron job runs every minute. for each registered target url, it spawns a durable object per region (using location hints) and sends a `HEAD` request to the url. response time is recorded and written to kv.
+
+why `HEAD`? it's:
+- safe (no side effects, no request body)
+- fast (just headers, no response body to parse)
+- widely supported
+
+the kv key structure per target url stores the latest latency per region and a timestamp. the auto-routing logic reads this to pick the winner for the most recent measurement window.
+
+## retry logic
+
+when a request fails, the proxy can retry through a different region. retry behavior:
+
+- **safe methods (GET, HEAD)**: always retryable, cycle through regions by ascending latency
+- **unsafe methods (POST, PUT, DELETE)**: only retry if the client passes an idempotency key header - otherwise a failed request is not retried to avoid duplicate side effects
+
+## what this is not
+
+this is not a cdn. it's not a load balancer in the traditional sense. it's a programmable routing layer that uses cloudflare's edge network to get requests into the right region. the upstream still handles the actual compute.
+
+## requirements
+
+### must have
+- request routing to a specified cloudflare region (via durable object location hint)
+- jurisdiction support (`eu`, `fedramp`) as an override
+- auto-routing mode that picks the fastest region from kv latency data
+- background cron (every 1 minute) that sends `HEAD` requests to registered urls from each region and writes results to kv
+- kv ttl of 10 minutes for latency records, refreshed on each cron run
+- retry across regions for idempotent requests on failure
+
+### nice to have
+- passive latency tracking from real traffic (rolling average alongside cron data)
+- per-request idempotency key passthrough for safe retries on unsafe methods
+- simple dashboard or log to see current region latency state
+- configurable cron interval and kv ttl
