@@ -12,26 +12,22 @@
 
 ## architecture overview
 
-```
-client request
-  ↓
-cloudflare worker (entry point)
-  ↓ reads region preference + latency data from kv
-  ↓ picks target region (explicit or auto)
-durable object (pinned to target region)
-  ↓ proxies request to upstream url
-upstream api / service
+```mermaid
+flowchart TD
+    A[client request] --> B[cloudflare worker\nentry point]
+    B -->|reads region preference\n+ latency data from kv| C{pick target region\nexplicit or auto}
+    C --> D[durable object\npinned to target region]
+    D -->|proxies request| E[upstream api / service]
 ```
 
-background (every 1 min):
+background - every 1 min:
 
-```
-cron trigger
-  ↓
-for each registered target url:
-  spawn DO per region → HEAD request to url → record latency
-  ↓
-write latency results to kv (10-min ttl)
+```mermaid
+flowchart TD
+    CT[cron trigger] --> U[for each registered\ntarget url]
+    U --> R[spawn DO per region]
+    R -->|HEAD request| UP[target url]
+    UP -->|record latency| KV[write to kv\n10-min ttl]
 ```
 
 ## components
@@ -113,35 +109,24 @@ registering target urls: the cron reads a kv key `monitored_urls` (a json array 
 
 ## request routing flow
 
-```
-incoming request
-  │
-  ├── x-jurisdiction set?
-  │     yes → use jurisdiction("eu" | "fedramp")
-  │     no  ↓
-  │
-  ├── x-region set? (wnam / enam / sam / weur / eeur / apac / oc / afr / me)
-  │     yes → use locationHint(region)
-  │     no  ↓
-  │
-  └── auto mode
-        read kv for target url latencies
-        pick region with lowest latency_ms
-        use locationHint(fastest_region)
+```mermaid
+flowchart TD
+    REQ[incoming request] --> J{x-jurisdiction\nset?}
+    J -->|yes| JU[use jurisdiction\neu or fedramp]
+    J -->|no| R{x-region\nset?}
+    R -->|yes| RH[use locationHint\nwnam / enam / sam\nweur / eeur / apac\noc / afr / me]
+    R -->|no| AUTO[auto mode:\nread kv for target url latencies\npick region with lowest latency_ms\nuse locationHint fastest_region]
 ```
 
 ## retry flow
 
-```
-request to DO fails (timeout, 5xx)
-  │
-  ├── method is GET or HEAD?
-  │     yes → retry with next-best region from kv latency list
-  │
-  └── method is POST/PUT/DELETE?
-        ├── x-idempotency-key header present?
-        │     yes → retry with next-best region
-        └── no → return error, do not retry
+```mermaid
+flowchart TD
+    FAIL[request to DO fails\ntimeout or 5xx] --> M{method is\nGET or HEAD?}
+    M -->|yes| RG[retry with\nnext-best region\nfrom kv latency list]
+    M -->|no POST/PUT/DELETE| IK{x-idempotency-key\nheader present?}
+    IK -->|yes| RI[retry with\nnext-best region]
+    IK -->|no| ERR[return error\ndo not retry]
 ```
 
 max retries: cycle through up to 3 regions before giving up.

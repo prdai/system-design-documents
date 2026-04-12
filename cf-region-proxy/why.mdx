@@ -8,4 +8,4 @@ and the retry angle is genuinely useful beyond just llms. region-locked apis, co
 
 so the idea became: build the missing layer. a cloudflare workers proxy that routes to specific regions, monitors latency across all of them via a background cron, and uses the freshest latency data to pick the fastest region automatically when that's what you want.
 
-the origin story context for completeness- this came out of a conversation with [malith jayasinghe](https://www.linkedin.com/in/malith-jayasinghe/) at the iit career fair 2026. he was interviewing for wso2 and asked about cloudflare ai gateway. i gave an answer about region-level retry logic and then went and figured out whether it was actually possible.
+the origin story context for completeness- this came out of a wso2 interview conversation at the iit career fair 2026. the interviewer asked about cloudflare ai gateway. i gave an answer about region-level retry logic and then went and figured out whether it was actually possible.
