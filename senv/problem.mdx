@@ -1,0 +1,27 @@
+# the problem
+
+environment variables are everywhere- api keys, database credentials, service tokens, feature flags. and they're almost always managed badly.
+
+## the scattered env problem
+
+every project has a `.env` file. it's gitignored, which is good. but then what? it lives on your machine, and maybe in a password manager if you're disciplined, and in a slack dm if you're not. when a new team member joins they get a "ask someone for the .env" onboarding experience. when a key rotates, half the team is running stale config for a week.
+
+there's no single source of truth. no audit trail. no access control. just a bunch of files floating around and a prayer that nobody leaked them.
+
+## the sharing problem
+
+sharing env values is painful in ways that scale badly with team size. sending keys over slack is the most common solution and it's genuinely bad- those messages don't expire, they're logged, they show up in search. but the alternatives (vault, aws ssm, etc.) have real operational overhead to set up and maintain for smaller projects.
+
+the gap between "just use .env files" and "use a full secrets management platform" is wide- and most teams fall into it.
+
+## the rotation problem
+
+when a key gets compromised- or just needs rotating as a matter of hygiene- you want to know who has it, where it's being used, and be able to push an update to everywhere it matters. with scattered env files, you can't do any of that cleanly.
+
+## what's missing
+
+a lightweight system that:
+- gives you a central place to manage env values
+- makes sharing them easy and auditable
+- handles access control without being a nightmare to set up
+- fits into the workflow without requiring a dedicated ops team to maintain

@@ -1,0 +1,60 @@
+# solution & requirements
+
+senv is a lightweight env management system- a central place to store, share, and sync environment variables securely, without the operational overhead of a full secrets platform.
+
+## the concept
+
+instead of env files scattered across machines and slack dms, you have a single encrypted store. team members pull env values they're authorized to access. changes propagate. there's an audit trail. keys can be rotated and the update reaches everywhere.
+
+two approaches are on the table- they share the same core idea but differ significantly in where the system lives and how it operates.
+
+## approach a: cloudflare-native
+
+build entirely on cloudflare primitives:
+
+- **cloudflare workers** - api layer that handles auth and serves env values
+- **cloudflare kv** - encrypted storage for the env values
+- **cloudflare access** - identity and access control, no auth system to build or maintain
+- **cloudflare d1** - audit log and metadata storage
+
+the upside is zero infra to manage- it's all cloudflare's problem. global edge delivery, built-in ddos protection, and the access layer is solid. the downside is vendor lock-in and the cost model gets weird if usage scales.
+
+## approach b: docker-based (current lean)
+
+self-hosted, containerized system:
+
+- **api server** - handles auth, encryption, and serving env values
+- **encrypted database** - stores the env values at rest (e.g. postgres with encrypted columns)
+- **cli tool** - how engineers interact with senv day-to-day (`senv pull`, `senv push`, `senv rotate`)
+- **web ui** (optional) - for managing projects and access without touching the cli
+
+the upside is portability and control- runs anywhere docker runs, no vendor dependency, you own the data. the downside is more to set up and maintain.
+
+## core functionality (both approaches)
+
+- store env values per project/environment (dev, staging, prod)
+- access control at the project and key level
+- audit log of who accessed or changed what
+- cli for pulling env values locally
+- key rotation with propagation
+
+## requirements
+
+### must have
+- encrypted storage at rest
+- access control (project-level at minimum)
+- cli tool for local use (`senv pull` etc.)
+- audit logging
+
+### nice to have
+- web ui for management
+- env diff / version history
+- slack or webhook notifications on rotation or access events
+- `.env` file generation on pull (so existing tooling keeps working)
+
+## what's not decided yet
+
+- which approach to build (cf-native vs docker)
+- auth mechanism for the docker approach (jwt, api keys, oauth)
+- encryption scheme details
+- whether to support dynamic secrets or just static env values
