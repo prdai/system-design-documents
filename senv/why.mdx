@@ -1,0 +1,11 @@
+# why i thought of this idea
+
+every project i've worked on has had the same problem- env management is a mess and everyone knows it and nobody fixes it because the bar to set up something "real" is too high.
+
+the options are always either too heavy (vault, aws ssm, doppler for teams) or too manual (pass it around in slack and hope for the best). there's a middle ground that should exist and mostly doesn't- something lightweight enough to actually use for a side project, but solid enough to trust with real credentials.
+
+the name senv- secure env- is pretty literal. the goal is just to make env management actually secure by default without making it painful.
+
+what pushed me to actually think through a design for this was realizing there are two pretty different architectures worth comparing- a cloudflare-native approach that leans into workers + kv + access, and a docker-based approach that's more self-hosted but portable. both are interesting for different reasons and it felt worth thinking through both before picking one.
+
+leaning docker right now- portability and control feel more important here than native cf integration- but that might change as i work through the details.
